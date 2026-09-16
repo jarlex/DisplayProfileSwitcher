@@ -16,17 +16,26 @@ internal sealed class HotkeyManager : IDisposable
     {
         UnregisterAll();
         var errors = new List<string>();
+        var registeredHotkeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var profile in profiles)
         {
             if (string.IsNullOrWhiteSpace(profile.Hotkey))
                 continue;
 
-            if (!TryParse(profile.Hotkey, out var modifiers, out var key))
+            if (!TryCanonicalize(profile.Hotkey, out var canonical))
             {
                 errors.Add($"{profile.Name}: atajo inválido '{profile.Hotkey}'.");
                 continue;
             }
+
+            if (!registeredHotkeys.Add(canonical))
+            {
+                errors.Add($"{profile.Name}: el atajo '{canonical}' ya está asignado a otro perfil.");
+                continue;
+            }
+
+            TryParse(canonical, out var modifiers, out var key);
 
             var id = _nextId++;
             if (!RegisterHotKey(_handle, id, modifiers | ModNoRepeat, key))
@@ -83,6 +92,15 @@ internal sealed class HotkeyManager : IDisposable
         return true;
     }
 
+    public static bool TryCanonicalize(string value, out string canonical)
+    {
+        canonical = string.Empty;
+        if (!TryParse(value, out var modifiers, out var key))
+            return false;
+
+        return TryFormat(ToKeys(modifiers), (Keys)key, out canonical);
+    }
+
     public static bool IsModifierKey(Keys key) => key is Keys.ControlKey or Keys.ShiftKey or Keys.Menu
         or Keys.LWin or Keys.RWin or Keys.Control or Keys.Shift or Keys.Alt;
 
@@ -104,6 +122,7 @@ internal sealed class HotkeyManager : IDisposable
         if (parts.Length == 0)
             return false;
 
+        var keySeen = false;
         foreach (var raw in parts)
         {
             var part = raw.ToUpperInvariant();
@@ -116,13 +135,16 @@ internal sealed class HotkeyManager : IDisposable
                 case "WIN":
                 case "WINDOWS": modifiers |= ModWin; break;
                 default:
+                    if (keySeen)
+                        return false;
                     if (!TryParseKey(part, out key))
                         return false;
+                    keySeen = true;
                     break;
             }
         }
 
-        return key != 0;
+        return keySeen && key != 0;
     }
 
     private static bool TryParseKey(string part, out uint key)
@@ -171,6 +193,16 @@ internal sealed class HotkeyManager : IDisposable
             "NUMPAD9" => Set(0x69, out key),
             _ => false
         };
+    }
+
+    private static Keys ToKeys(uint modifiers)
+    {
+        var result = Keys.None;
+        if ((modifiers & ModControl) != 0) result |= Keys.Control;
+        if ((modifiers & ModAlt) != 0) result |= Keys.Alt;
+        if ((modifiers & ModShift) != 0) result |= Keys.Shift;
+        if ((modifiers & ModWin) != 0) result |= Keys.LWin;
+        return result;
     }
 
     private static bool Set(uint value, out uint target)

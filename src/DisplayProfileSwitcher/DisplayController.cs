@@ -6,6 +6,50 @@ namespace DisplayProfileSwitcher;
 
 internal sealed class DisplayController
 {
+    public bool TryCaptureSnapshot(DisplayProfile profile, out DisplayPreviewSnapshot? snapshot, out string error)
+    {
+        GammaSnapshot[] gamma;
+        try
+        {
+            var screens = SelectGammaTargets(Screen.AllScreens, profile.ApplyToAllDisplays);
+            gamma = screens.Select(screen => new GammaSnapshot(screen, CaptureGammaRamp(screen))).ToArray();
+        }
+        catch (Exception ex)
+        {
+            Diagnostics.Log(DiagnosticCategory.Gamma, "capturar la gamma para la prueba", ex);
+            snapshot = null;
+            error = "No se puede probar este perfil de forma segura: Windows no permite capturar la gamma exacta.";
+            return false;
+        }
+
+        try
+        {
+            var displays = NvDisplay.GetDisplays();
+            if (displays.Length == 0)
+                throw new InvalidOperationException("NVAPI no ha devuelto monitores NVIDIA.");
+            var targets = profile.ApplyToAllDisplays ? displays : GetPrimaryNvidiaDisplay(displays);
+            var nvidia = targets.Select(display => new NvidiaSnapshot(display, display.DigitalVibranceControl.CurrentLevel)).ToArray();
+            snapshot = new DisplayPreviewSnapshot(gamma, nvidia);
+            error = string.Empty;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Diagnostics.Log(DiagnosticCategory.Nvidia, "capturar Digital Vibrance para la prueba", ex);
+            snapshot = null;
+            error = "No se puede probar este perfil de forma segura: NVIDIA no permite capturar Digital Vibrance.";
+            return false;
+        }
+    }
+
+    public ApplyResult Restore(DisplayPreviewSnapshot snapshot)
+    {
+        var results = new List<ApplyComponentResult>();
+        results.Add(RestoreGamma(snapshot.Gamma));
+        results.Add(RestoreNvidia(snapshot.Nvidia));
+        return new ApplyResult(results);
+    }
+
     public ApplyResult Apply(DisplayProfile profile)
     {
         return new ApplyResult(new[] { ApplyGamma(profile), ApplyVibrance(profile) });
@@ -28,11 +72,19 @@ internal sealed class DisplayController
                         throw new InvalidOperationException("Windows no pudo aplicar la gamma al monitor.");
                     applied++;
                 }
-                catch (Exception ex) { errors.Add($"Monitor {i + 1}: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    Diagnostics.Log(DiagnosticCategory.Gamma, "aplicar gamma a un monitor", ex);
+                    errors.Add(Diagnostics.FormatApplyError(DiagnosticCategory.Gamma));
+                }
             }
             return new ApplyComponentResult("Gamma", errors.Count == 0, applied, errors);
         }
-        catch (Exception ex) { return new ApplyComponentResult("Gamma", false, 0, new[] { ex.Message }); }
+        catch (Exception ex)
+        {
+            Diagnostics.Log(DiagnosticCategory.Gamma, "aplicar gamma", ex);
+            return new ApplyComponentResult("Gamma", false, 0, new[] { Diagnostics.FormatApplyError(DiagnosticCategory.Gamma) });
+        }
     }
 
     private static ApplyComponentResult ApplyVibrance(DisplayProfile profile)
@@ -49,11 +101,19 @@ internal sealed class DisplayController
             for (var i = 0; i < targets.Length; i++)
             {
                 try { targets[i].DigitalVibranceControl.CurrentLevel = level; applied++; }
-                catch (Exception ex) { errors.Add($"Monitor NVIDIA {i + 1}: {ex.Message}"); }
+                catch (Exception ex)
+                {
+                    Diagnostics.Log(DiagnosticCategory.Nvidia, "aplicar Digital Vibrance a un monitor", ex);
+                    errors.Add(Diagnostics.FormatApplyError(DiagnosticCategory.Nvidia));
+                }
             }
             return new ApplyComponentResult("Digital Vibrance", errors.Count == 0, applied, errors);
         }
-        catch (Exception ex) { return new ApplyComponentResult("Digital Vibrance", false, 0, new[] { ex.Message }); }
+        catch (Exception ex)
+        {
+            Diagnostics.Log(DiagnosticCategory.Nvidia, "aplicar Digital Vibrance", ex);
+            return new ApplyComponentResult("Digital Vibrance", false, 0, new[] { Diagnostics.FormatApplyError(DiagnosticCategory.Nvidia) });
+        }
     }
 
     private static Screen[] SelectGammaTargets(Screen[] displays, bool allDisplays)
@@ -101,6 +161,66 @@ internal sealed class DisplayController
         }
     }
 
+    private static ushort[] CaptureGammaRamp(Screen screen)
+    {
+        var deviceContext = CreateDC("DISPLAY", screen.DeviceName, null, IntPtr.Zero);
+        if (deviceContext == IntPtr.Zero)
+            throw new InvalidOperationException("Windows no pudo crear el contexto del monitor.");
+
+        try
+        {
+            var ramp = new ushort[768];
+            if (!GetDeviceGammaRamp(deviceContext, ramp))
+                throw new InvalidOperationException("Windows no pudo leer la gamma del monitor.");
+            return ramp;
+        }
+        finally
+        {
+            DeleteDC(deviceContext);
+        }
+    }
+
+    private static ApplyComponentResult RestoreGamma(IReadOnlyList<GammaSnapshot> snapshots)
+    {
+        var errors = new List<string>();
+        var restored = 0;
+        foreach (var snapshot in snapshots)
+        {
+            try
+            {
+                if (!ApplyGammaRamp(snapshot.Screen, snapshot.Ramp))
+                    throw new InvalidOperationException("Windows no pudo restaurar la gamma del monitor.");
+                restored++;
+            }
+            catch (Exception ex)
+            {
+                Diagnostics.Log(DiagnosticCategory.Gamma, "restaurar la gamma", ex);
+                errors.Add(Diagnostics.FormatApplyError(DiagnosticCategory.Gamma));
+            }
+        }
+        return new ApplyComponentResult("Gamma", errors.Count == 0, restored, errors);
+    }
+
+    private static ApplyComponentResult RestoreNvidia(IReadOnlyList<NvidiaSnapshot> snapshots)
+    {
+        var errors = new List<string>();
+        var restored = 0;
+        foreach (var snapshot in snapshots)
+        {
+            try
+            {
+                snapshot.Display.DigitalVibranceControl.CurrentLevel = snapshot.Level;
+                restored++;
+            }
+            catch (Exception ex)
+            {
+                Diagnostics.Log(DiagnosticCategory.Nvidia, "restaurar Digital Vibrance", ex);
+                errors.Add(Diagnostics.FormatApplyError(DiagnosticCategory.Nvidia));
+            }
+        }
+        return new ApplyComponentResult("Digital Vibrance", errors.Count == 0, restored, errors);
+    }
+
     [DllImport("gdi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr CreateDC(string driver, string device, string? output, IntPtr initData);
 
@@ -111,6 +231,10 @@ internal sealed class DisplayController
     [DllImport("gdi32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetDeviceGammaRamp(IntPtr deviceContext, ushort[] ramp);
+
+    [DllImport("gdi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetDeviceGammaRamp(IntPtr deviceContext, ushort[] ramp);
 
     private static NvDisplay[] GetPrimaryNvidiaDisplay(NvDisplay[] displays)
     {

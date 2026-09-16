@@ -40,7 +40,7 @@ public sealed class MainWindowSmokeTests
                 "The published application did not expose the expected main window title.");
             AssertReady(window, ControlType.List, "profiles list");
 
-            foreach (var buttonName in new[] { "Añadir", "Borrar", "Guardar perfil", "Aplicar ahora" })
+            foreach (var buttonName in new[] { "Añadir", "Borrar", "Guardar perfil", "Aplicar ahora", "Capturar", "Quitar" })
                 AssertReady(window, ControlType.Button, $"button '{buttonName}'", buttonName);
 
             foreach (var label in new[] { "Nombre", "Gamma", "Brillo (50 = neutro)", "Contraste (50 = neutro)",

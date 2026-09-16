@@ -38,26 +38,36 @@ internal sealed class ConfigStore
         }
         catch (Exception primaryError)
         {
+            Diagnostics.Log(DiagnosticCategory.Configuration, "leer la configuración principal", primaryError);
             try
             {
                 var recovered = Migrate(File.ReadAllText(BackupPath), out _);
                 SaveAtomic(recovered, createBackup: false);
                 return new ConfigLoadResult(recovered, ConfigLoadState.RecoveredFromBackup,
-                    $"La configuración principal estaba dañada ({primaryError.Message}) y se recuperó desde el backup.");
+                    "Configuración: el archivo principal estaba dañado y se recuperó desde el backup.");
             }
             catch (Exception backupError)
             {
+                Diagnostics.Log(DiagnosticCategory.Configuration, "recuperar la configuración desde el backup", backupError);
                 PreserveCorruptFile();
                 return new ConfigLoadResult(CreateDefault(), ConfigLoadState.Corrupt,
-                    $"La configuración está dañada y no se pudo recuperar desde el backup: {backupError.Message} Se conservó una copia en {CorruptCopyPath}.");
+                    "Configuración: el archivo está dañado y no se pudo recuperar; se conservó una copia para revisión.");
             }
         }
     }
 
     public void Save(AppConfig config)
     {
-        Directory.CreateDirectory(ConfigDirectory);
-        SaveAtomic(config, createBackup: true);
+        try
+        {
+            Directory.CreateDirectory(ConfigDirectory);
+            SaveAtomic(config, createBackup: true);
+        }
+        catch (Exception ex)
+        {
+            Diagnostics.Log(DiagnosticCategory.Configuration, "guardar la configuración", ex);
+            throw;
+        }
     }
 
     private void SaveAtomic(AppConfig config, bool createBackup)

@@ -1,2 +1,8 @@
 # Local AI runtime state
 .atl/
+
+# Build and test artifacts
+**/bin/
+**/obj/
+**/TestResults/
+publish/
