@@ -35,6 +35,7 @@ internal sealed class MainForm : Form
         _config = load.Config;
         _configLoadState = load.State;
         _configLoadMessage = load.Message;
+        Icon = LoadApplicationIcon();
         Text = "Display Profile Switcher";
         Width = 760;
         Height = 500;
@@ -177,11 +178,27 @@ internal sealed class MainForm : Form
 
     private void BuildTray()
     {
-        _tray.Icon = SystemIcons.Application;
+        _tray.Icon = LoadApplicationIcon();
         _tray.Text = "Display Profile Switcher";
         _tray.Visible = true;
         _tray.DoubleClick += (_, _) => ShowMainWindow();
         RebuildTrayMenu();
+    }
+
+    private static System.Drawing.Icon LoadApplicationIcon()
+    {
+        try
+        {
+            var icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+            if (icon is not null)
+                return icon;
+        }
+        catch
+        {
+            // Use the system icon if the executable has no readable associated icon.
+        }
+
+        return new System.Drawing.Icon(SystemIcons.Application, SystemIcons.Application.Size);
     }
 
     private void RebuildTrayMenu()
