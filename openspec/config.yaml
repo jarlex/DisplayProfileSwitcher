@@ -1,0 +1,55 @@
+schema: spec-driven
+
+context: |
+  Project: DisplayProfileSwitcher
+  Stack: C#/.NET 8 Windows Forms desktop application targeting Windows 10/11.
+  Architecture: Single-project UI application with MainForm coordinating ConfigStore, DisplayController, HotkeyManager, and StartupManager.
+  Dependencies: NvAPIWrapper.Net and WindowsDisplayAPI.
+  Testing: No test project, test runner, coverage tool, or workspace-wide test command detected.
+  Style: Nullable reference types and implicit usings enabled; existing UI copy is Spanish.
+
+strict_tdd: false
+
+projects:
+  - path: src/DisplayProfileSwitcher
+    stack: C#/.NET 8 Windows Forms
+    test_command: ""
+    test_framework: ""
+    test_layers:
+      unit: false
+      integration: false
+      e2e: false
+    coverage_command: ""
+    linter_command: ""
+    type_checker_command: ""
+    formatter_command: ""
+    build_command: dotnet build src/DisplayProfileSwitcher/DisplayProfileSwitcher.csproj
+
+testing:
+  strict_tdd: false
+  workspace_test_command: ""
+  reason: No explicit workspace-wide test command covers the discovered project.
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes.
+  specs:
+    - Use Given/When/Then scenarios.
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY).
+  design:
+    - Document architecture decisions with rationale.
+    - Include sequence diagrams for complex flows.
+  tasks:
+    - Group tasks by phase and use hierarchical numbering.
+    - Keep tasks completable in one session.
+  apply:
+    guidelines:
+      - Follow existing C# and Windows Forms patterns.
+    tdd: false
+    test_command: ""
+  verify:
+    test_command: ""
+    build_command: dotnet build src/DisplayProfileSwitcher/DisplayProfileSwitcher.csproj
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas.

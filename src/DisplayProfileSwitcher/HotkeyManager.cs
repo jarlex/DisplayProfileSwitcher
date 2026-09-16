@@ -43,6 +43,49 @@ internal sealed class HotkeyManager : IDisposable
 
     public DisplayProfile? Resolve(int id) => _registered.TryGetValue(id, out var profile) ? profile : null;
 
+    public static bool TryFormat(Keys modifiers, Keys key, out string value)
+    {
+        value = string.Empty;
+        if (IsModifierKey(key))
+            return false;
+
+        var keyName = key switch
+        {
+            >= Keys.A and <= Keys.Z => key.ToString().ToUpperInvariant(),
+            >= Keys.D0 and <= Keys.D9 => ((char)('0' + ((int)key - (int)Keys.D0))).ToString(),
+            >= Keys.NumPad0 and <= Keys.NumPad9 => $"NUMPAD{(int)key - (int)Keys.NumPad0}",
+            >= Keys.F1 and <= Keys.F24 => key.ToString().ToUpperInvariant(),
+            Keys.Up => "UP",
+            Keys.Down => "DOWN",
+            Keys.Left => "LEFT",
+            Keys.Right => "RIGHT",
+            Keys.Home => "HOME",
+            Keys.End => "END",
+            Keys.PageUp => "PGUP",
+            Keys.PageDown => "PGDN",
+            Keys.Escape => "ESCAPE",
+            Keys.Delete => "DELETE",
+            Keys.Insert => "INSERT",
+            Keys.Space => "SPACE",
+            _ => null
+        };
+
+        if (keyName is null)
+            return false;
+
+        var parts = new List<string>();
+        if (modifiers.HasFlag(Keys.Control)) parts.Add("CTRL");
+        if (modifiers.HasFlag(Keys.Alt)) parts.Add("ALT");
+        if (modifiers.HasFlag(Keys.Shift)) parts.Add("SHIFT");
+        if (modifiers.HasFlag(Keys.LWin) || modifiers.HasFlag(Keys.RWin)) parts.Add("WIN");
+        parts.Add(keyName);
+        value = string.Join('+', parts);
+        return true;
+    }
+
+    public static bool IsModifierKey(Keys key) => key is Keys.ControlKey or Keys.ShiftKey or Keys.Menu
+        or Keys.LWin or Keys.RWin or Keys.Control or Keys.Shift or Keys.Alt;
+
     public void UnregisterAll()
     {
         foreach (var id in _registered.Keys.ToArray())
@@ -112,6 +155,20 @@ internal sealed class HotkeyManager : IDisposable
             "END" => Set(0x23, out key),
             "PGUP" => Set(0x21, out key),
             "PGDN" => Set(0x22, out key),
+            "ESC" or "ESCAPE" => Set(0x1B, out key),
+            "DEL" or "DELETE" => Set(0x2E, out key),
+            "INS" or "INSERT" => Set(0x2D, out key),
+            "SPACE" => Set(0x20, out key),
+            "NUMPAD0" => Set(0x60, out key),
+            "NUMPAD1" => Set(0x61, out key),
+            "NUMPAD2" => Set(0x62, out key),
+            "NUMPAD3" => Set(0x63, out key),
+            "NUMPAD4" => Set(0x64, out key),
+            "NUMPAD5" => Set(0x65, out key),
+            "NUMPAD6" => Set(0x66, out key),
+            "NUMPAD7" => Set(0x67, out key),
+            "NUMPAD8" => Set(0x68, out key),
+            "NUMPAD9" => Set(0x69, out key),
             _ => false
         };
     }

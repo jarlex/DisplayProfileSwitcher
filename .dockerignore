@@ -1,0 +1,9 @@
+.git
+.codegraph
+.atl
+openspec
+bin
+obj
+publish
+**/bin
+**/obj

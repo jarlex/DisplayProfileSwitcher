@@ -1,0 +1,40 @@
+name: Validate Linux Docker Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compile and verify Windows publish output
+        run: ./scripts/docker-build.sh
+
+  windows-ui-smoke:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.x
+
+      - name: Publish win-x64 application
+        run: dotnet publish src/DisplayProfileSwitcher/DisplayProfileSwitcher.csproj --configuration Release --runtime win-x64 --self-contained true --output artifacts/publish
+
+      - name: Run WinForms UI smoke test
+        env:
+          DISPLAY_PROFILE_SWITCHER_EXE: ${{ github.workspace }}\artifacts\publish\DisplayProfileSwitcher.exe
+        run: dotnet test tests/DisplayProfileSwitcher.UiSmokeTests/DisplayProfileSwitcher.UiSmokeTests.csproj --configuration Release

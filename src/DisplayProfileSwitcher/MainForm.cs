@@ -22,7 +22,7 @@ internal sealed class MainForm : Form
     private readonly NumericUpDown _brightness = new() { Minimum = 0, Maximum = 100, Width = 120 };
     private readonly NumericUpDown _contrast = new() { Minimum = 0, Maximum = 100, Width = 120 };
     private readonly NumericUpDown _vibrance = new() { Minimum = 0, Maximum = 100, Width = 120 };
-    private readonly TextBox _hotkey = new() { Width = 160, PlaceholderText = "Ctrl+Alt+1" };
+    private readonly TextBox _hotkey = new() { Width = 160, PlaceholderText = "CTRL+ALT+1" };
     private readonly CheckBox _allDisplays = new() { Text = "Aplicar a todos los monitores", AutoSize = true };
     private readonly NumericUpDown _reapply = new() { Minimum = 0, Maximum = 60, Width = 120 };
     private readonly CheckBox _applyLast = new() { Text = "Aplicar el último perfil al iniciar", AutoSize = true };
@@ -139,6 +139,27 @@ internal sealed class MainForm : Form
         Controls.Add(root);
 
         _profiles.SelectedIndexChanged += (_, _) => LoadSelectedProfile();
+        _hotkey.KeyDown += CaptureHotkey;
+    }
+
+    private void CaptureHotkey(object? sender, KeyEventArgs e)
+    {
+        if (HotkeyManager.IsModifierKey(e.KeyCode))
+        {
+            e.Handled = true;
+            e.SuppressKeyPress = true;
+            return;
+        }
+
+        var modifiers = e.Modifiers | (Control.ModifierKeys & (Keys.LWin | Keys.RWin));
+        if (!HotkeyManager.TryFormat(modifiers, e.KeyCode, out var hotkey))
+            return;
+
+        e.Handled = true;
+        e.SuppressKeyPress = true;
+        _hotkey.Text = hotkey;
+        _hotkey.SelectionStart = _hotkey.TextLength;
+        SaveCurrentProfile();
     }
 
     private static void AddRow(TableLayoutPanel panel, int row, string label, Control control)

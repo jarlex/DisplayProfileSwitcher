@@ -1,5 +1,7 @@
 # Display Profile Switcher
 
+![Display Profile Switcher banner](images/DisplayProfileSwitchBanner.jpeg)
+
 Utilidad para Windows 10/11 creada en C#/.NET 8.
 
 ## Funciones
@@ -32,6 +34,24 @@ Necesitas el **.NET 8 SDK** instalado.
    `publish\DisplayProfileSwitcher.exe`
 
 También puedes abrir `DisplayProfileSwitcher.sln` en Visual Studio 2022.
+
+### Compilar desde Ubuntu con Docker
+
+Con Docker instalado, clona el repositorio y ejecuta este comando desde cualquier directorio (sustituye el marcador por la URL del repositorio):
+
+```bash
+git clone <URL_DEL_REPOSITORIO> DisplayProfileSwitcher && cd DisplayProfileSwitcher && ./scripts/docker-build.sh
+```
+
+El script construye la imagen con el SDK de .NET 8, publica para `win-x64` y verifica que exista `DisplayProfileSwitcher.exe` dentro de la imagen. La misma comprobación se ejecuta automáticamente en GitHub Actions sobre Ubuntu.
+
+Esta validación confirma restauración, compilación y publicación del artefacto. Docker en Ubuntu no puede validar los elementos visuales de Windows Forms ni el comportamiento real de Windows, Win32, NVIDIA/NVAPI o los controladores de pantalla. Para esa validación se necesita ejecutar la aplicación en Windows.
+
+### Smoke test de la interfaz en Windows
+
+GitHub Actions ejecuta un smoke test automatizado en `windows-latest` después de publicar el ejecutable `win-x64`. Usa FlaUI UIA3 para comprobar que la ventana principal y sus controles esenciales aparecen habilitados y visibles. El test solo inspecciona la interfaz: no pulsa **Aplicar ahora**, no cambia la configuración de pantalla y no requiere hardware NVIDIA.
+
+Esta cobertura es una validación de comportamiento de la UI, no una regresión visual pixel-perfect. Las pruebas con capturas de pantalla y baselines visuales se pueden añadir posteriormente si se necesita esa garantía.
 
 ## Perfiles iniciales
 
