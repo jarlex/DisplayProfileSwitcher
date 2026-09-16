@@ -44,8 +44,11 @@ public sealed class MainWindowSmokeTests
                 AssertReady(window, ControlType.Button, $"button '{buttonName}'", buttonName);
 
             foreach (var label in new[] { "Nombre", "Gamma", "Brillo (50 = neutro)", "Contraste (50 = neutro)",
-                                          "Digital Vibrance", "Atajo global", "Monitores", "Reaplicar", "Opciones", "Estado" })
+                                          "Digital Vibrance", "Atajo global", "Monitores", "Reaplicar" })
                 AssertReady(window, ControlType.Text, $"label '{label}'", label);
+
+            foreach (var group in new[] { "Perfiles", "Configuración del perfil", "Opciones de la aplicación", "Mensajes" })
+                AssertReady(window, ControlType.Group, $"group '{group}'", group);
 
             AssertAtLeastReady(window, ControlType.Edit, 2, "text input controls");
             AssertAtLeastReady(window, ControlType.Spinner, 5, "numeric input controls");

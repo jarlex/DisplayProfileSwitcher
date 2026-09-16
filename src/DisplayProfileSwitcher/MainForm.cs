@@ -85,61 +85,121 @@ internal sealed class MainForm : Form
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 1,
+            ColumnCount = 1,
+            RowCount = 3,
             Padding = new Padding(10)
         };
-        root.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220));
         root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-        var left = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1 };
-        left.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        left.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
-        left.Controls.Add(_profiles, 0, 0);
+        var upperArea = new SplitContainer
+        {
+            Dock = DockStyle.Fill,
+            Orientation = Orientation.Vertical,
+            FixedPanel = FixedPanel.Panel1,
+            Size = new Size(680, 300),
+            SplitterDistance = 210,
+            Panel1MinSize = 180,
+            Panel2MinSize = 360
+        };
 
-        var leftButtons = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight };
+        var profileListLayout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            Padding = new Padding(8, 6, 8, 6)
+        };
+        profileListLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        profileListLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        profileListLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        profileListLayout.Controls.Add(_profiles, 0, 0);
+
+        var leftButtons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false
+        };
         var add = new Button { Text = "Añadir", AutoSize = true };
         var del = new Button { Text = "Borrar", AutoSize = true };
         add.Click += (_, _) => AddProfile();
         del.Click += (_, _) => DeleteProfile();
         leftButtons.Controls.Add(add);
         leftButtons.Controls.Add(del);
-        left.Controls.Add(leftButtons, 0, 1);
+        profileListLayout.Controls.Add(leftButtons, 0, 1);
 
-        var editor = new TableLayoutPanel
+        var profilesGroup = new GroupBox
         {
             Dock = DockStyle.Fill,
-            ColumnCount = 2,
-            RowCount = 11,
-            Padding = new Padding(14, 0, 0, 0),
-            AutoScroll = true
+            Text = "Perfiles"
         };
-        editor.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 180));
-        editor.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        profilesGroup.Controls.Add(profileListLayout);
+        upperArea.Panel1.Controls.Add(profilesGroup);
 
-        AddRow(editor, 0, "Nombre", _name);
-        AddRow(editor, 1, "Gamma", _gamma);
-        AddRow(editor, 2, "Brillo (50 = neutro)", _brightness);
-        AddRow(editor, 3, "Contraste (50 = neutro)", _contrast);
-        AddRow(editor, 4, "Digital Vibrance", _vibrance);
-        var hotkeyPanel = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
+        var profileEditorScroll = new Panel
+        {
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            Padding = new Padding(8, 6, 8, 6)
+        };
+
+        var profileFields = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 2,
+            RowCount = 9
+        };
+        profileFields.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 180));
+        profileFields.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        for (var row = 0; row < profileFields.RowCount; row++)
+            profileFields.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+        AddRow(profileFields, 0, "Nombre", _name);
+        AddRow(profileFields, 1, "Gamma", _gamma);
+        AddRow(profileFields, 2, "Brillo (50 = neutro)", _brightness);
+        AddRow(profileFields, 3, "Contraste (50 = neutro)", _contrast);
+        AddRow(profileFields, 4, "Digital Vibrance", _vibrance);
+        var hotkeyPanel = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = true
+        };
         hotkeyPanel.Controls.Add(_hotkey);
         hotkeyPanel.Controls.Add(_captureHotkey);
         hotkeyPanel.Controls.Add(_clearHotkey);
-        AddRow(editor, 5, "Atajo global", hotkeyPanel);
-        AddRow(editor, 6, "Monitores", _allDisplays);
+        AddRow(profileFields, 5, "Atajo global", hotkeyPanel);
+        AddRow(profileFields, 6, "Monitores", _allDisplays);
 
-        var reapplyPanel = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight };
+        var reapplyPanel = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = true
+        };
         reapplyPanel.Controls.Add(_reapply);
         reapplyPanel.Controls.Add(new Label { Text = "segundos (0 = desactivado)", AutoSize = true, Padding = new Padding(4, 7, 0, 0) });
-        AddRow(editor, 7, "Reaplicar", reapplyPanel);
+        AddRow(profileFields, 7, "Reaplicar", reapplyPanel);
 
-        var options = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false };
-        options.Controls.Add(_applyLast);
-        options.Controls.Add(_runStartup);
-        AddRow(editor, 8, "Opciones", options);
-
-        var actions = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.LeftToRight };
+        var actions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = true
+        };
         var save = new Button { Text = "Guardar perfil", AutoSize = true };
         var apply = new Button { Text = "Aplicar ahora", AutoSize = true };
         var preview = new Button { Text = "Probar 10 s", AutoSize = true };
@@ -165,12 +225,68 @@ internal sealed class MainForm : Form
         actions.Controls.Add(preview);
         actions.Controls.Add(confirm);
         actions.Controls.Add(revert);
-        actions.Controls.Add(_previewCountdown);
-        AddRow(editor, 9, string.Empty, actions);
-        AddRow(editor, 10, "Estado", _status);
+        profileFields.Controls.Add(actions, 0, 8);
+        profileFields.SetColumnSpan(actions, 2);
 
-        root.Controls.Add(left, 0, 0);
-        root.Controls.Add(editor, 1, 0);
+        profileEditorScroll.Controls.Add(profileFields);
+        var profileEditorGroup = new GroupBox
+        {
+            Text = "Configuración del perfil",
+            Dock = DockStyle.Fill,
+            Padding = new Padding(8)
+        };
+        profileEditorGroup.Controls.Add(profileEditorScroll);
+        upperArea.Panel2.Padding = new Padding(10, 0, 0, 0);
+        upperArea.Panel2.Controls.Add(profileEditorGroup);
+
+        var applicationOptions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = true,
+            Padding = new Padding(8, 4, 8, 4)
+        };
+        applicationOptions.Controls.Add(_applyLast);
+        applicationOptions.Controls.Add(_runStartup);
+        var applicationOptionsGroup = new GroupBox
+        {
+            Text = "Opciones de la aplicación",
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Margin = new Padding(0, 8, 0, 0)
+        };
+        applicationOptionsGroup.Controls.Add(applicationOptions);
+
+        var messagesLayout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            ColumnCount = 1,
+            RowCount = 2,
+            Padding = new Padding(8, 4, 8, 4)
+        };
+        messagesLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        messagesLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        messagesLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        messagesLayout.Controls.Add(_status, 0, 0);
+        messagesLayout.Controls.Add(_previewCountdown, 0, 1);
+        var messagesGroup = new GroupBox
+        {
+            Text = "Mensajes",
+            Dock = DockStyle.Fill,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink,
+            Margin = new Padding(0, 8, 0, 0)
+        };
+        messagesGroup.Controls.Add(messagesLayout);
+
+        root.Controls.Add(upperArea, 0, 0);
+        root.Controls.Add(applicationOptionsGroup, 0, 1);
+        root.Controls.Add(messagesGroup, 0, 2);
         Controls.Add(root);
 
         _profiles.SelectedIndexChanged += (_, _) => LoadSelectedProfile();
@@ -228,7 +344,8 @@ internal sealed class MainForm : Form
 
     private static void AddRow(TableLayoutPanel panel, int row, string label, Control control)
     {
-        panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        while (panel.RowStyles.Count <= row)
+            panel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         panel.Controls.Add(new Label
         {
             Text = label,
@@ -237,6 +354,7 @@ internal sealed class MainForm : Form
             Padding = new Padding(0, 7, 0, 0)
         }, 0, row);
         panel.Controls.Add(control, 1, row);
+        control.Anchor |= AnchorStyles.Left | AnchorStyles.Right;
     }
 
     private void BuildTray()
